@@ -1,0 +1,4 @@
+gradio
+langchain-community
+langchain-openai
+langchain-postgres
