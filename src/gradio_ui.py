@@ -1,5 +1,4 @@
 import asyncio
-import json
 from textwrap import dedent
 
 import gradio as gr
@@ -10,8 +9,8 @@ from support.vector_store import get_pg_engine, get_vector_store
 pg_engine = get_pg_engine()
 try:
     vector_store = get_vector_store(pg_engine)
-    llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
-    llm_mini = ChatOpenAI(model="gpt-4o-mini", temperature=0.5)
+    llm = ChatOpenAI(model="gpt-4.1", temperature=0.5)
+    llm_mini = ChatOpenAI(model="gpt-4.1-mini", temperature=0.5)
     llm_mini_json = llm_mini.with_structured_output(method="json_mode")
     system_prompt = dedent("""\
     Instructions:
