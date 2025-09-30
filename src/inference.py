@@ -16,7 +16,7 @@ try:
     llm_mini_json = llm_mini.with_structured_output(method="json_mode")
     system_prompt = dedent("""\
     Instructions:
-    Answer the following User Query based on the provided Context.
+    Answer the following User Query based solely on the provided Context.
     If the answer is not in the Context, check if it is in the Chat History, and answer based on that.
     If you still can't find an answer, say "That is out of my scope".
     Use the provided Metadata to give sources of the Context used on the answer, if a source is available.""").strip()
@@ -32,13 +32,28 @@ try:
         {user_query}""").strip()
         sub_queries = llm_mini_json.invoke(sub_query_prompt)["questions"]
         print(f"sub_queries: {sub_queries}")
-        relevant_documents = [doc for sub_query in sub_queries for doc in
-                              vector_store.similarity_search_with_score(sub_query, k=2)]
-        print(f"relevant_documents score: {[score for _, score in relevant_documents]}")
-        relevant_documents = [document for document, score in relevant_documents if score < 0.9]
-        print(f"relevant_documents after score filtering: {relevant_documents}")
-        relevant_context = "\n\n".join([relevant_document.page_content for relevant_document in relevant_documents])
-        relevant_metadata = [relevant_document.metadata for relevant_document in relevant_documents]
+        multi_query_prompt = dedent(f"""\
+        Given the following list of questions, transform each into a set of 2 questions.
+        Each question should on a different part of the original question, representing different points of view.
+        Return the transformed questions in a JSON array.
+        The JSON object should have a key named "questions" and a value which is a JSON array of questions.
+        Questions:
+        {sub_queries}""").strip()
+        multi_queries = llm_mini_json.invoke(multi_query_prompt)["questions"]
+        print(f"multi_queries: {multi_queries}")
+        retrieved_docs = [doc for multi_query in multi_queries for doc in
+                          vector_store.similarity_search_with_score(multi_query, k=1)]
+        print(f"retrieved_docs score: {[score for _, score in retrieved_docs]}")
+        relevant_retrieved_docs = []
+        seen_ids = set()
+        for document, score in retrieved_docs:
+            document_id = document.id
+            if score < 0.7 and document_id not in seen_ids:
+                relevant_retrieved_docs.append(document)
+                seen_ids.add(document_id)
+        print(f"relevant_retrieved_docs: {relevant_retrieved_docs}")
+        relevant_context = "\n\n".join([relevant_doc.page_content for relevant_doc in relevant_retrieved_docs])
+        relevant_metadata = [relevant_doc.metadata for relevant_doc in relevant_retrieved_docs]
         final_prompt = dedent(f"""\
         User Query:
         {user_query}
