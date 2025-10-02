@@ -2,18 +2,15 @@ import asyncio
 from textwrap import dedent
 
 import gradio as gr
-from langchain_openai import ChatOpenAI
 
 from support.cli import parse_inference_args
+from support.llm import llm_mini_json, llm
 from support.vector_store import get_pg_engine, get_vector_store
 
 args = parse_inference_args()
 pg_engine = get_pg_engine()
 try:
     vector_store = get_vector_store(pg_engine, args.table)
-    llm = ChatOpenAI(model="gpt-4.1", temperature=0.5)
-    llm_mini = ChatOpenAI(model="gpt-4.1-mini", temperature=0.5)
-    llm_mini_json = llm_mini.with_structured_output(method="json_mode")
     system_prompt = dedent("""\
     Instructions:
     Answer the following User Query based solely on the provided Context.
@@ -68,8 +65,7 @@ try:
             llm_messages.append((history_message["role"], history_message["content"]))
         llm_messages.append(("user", final_prompt))
         print(f"messages: {llm_messages}")
-        ai_msg = llm.invoke(llm_messages)
-        return ai_msg.content
+        return llm.invoke(llm_messages).content
 
 
     gr.ChatInterface(inference_function, type="messages").launch()
