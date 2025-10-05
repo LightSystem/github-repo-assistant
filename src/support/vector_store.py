@@ -1,11 +1,13 @@
+import os
 from langchain_openai import OpenAIEmbeddings
 from langchain_postgres import PGEngine
 from langchain_postgres import PGVectorStore
 
 
 def get_pg_engine():
-    return PGEngine.from_connection_string(
-        "postgresql+psycopg://postgres:postgres@localhost:5432/github_repo_assistant")
+    database_url = os.getenv("DATABASE_URL",
+                             "postgresql+psycopg://postgres:postgres@localhost:5432/github_repo_assistant")
+    return PGEngine.from_connection_string(database_url)
 
 
 def get_vector_store(pg_engine: PGEngine, table_name) -> PGVectorStore:
